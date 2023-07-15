@@ -1,0 +1,637 @@
+from api_helper import ShoonyaApiPy
+import logging
+import pandas as pd
+#import NSEpy
+import pyotp
+from cmath import e
+from lib2to3.pgen2 import token
+#from sre_constants import success
+from tkinter import E
+from unittest import mock
+import numpy as ny
+#import yaml
+import datetime
+import time
+from time import sleep
+from datetime import date, timedelta
+from datetime import datetime
+import datetime as dt
+from datetime import time
+import socketio
+import LoginShoonya as l
+from NorenRestApiPy.NorenApi import NorenApi
+import schedule
+# important to see working 
+#enable dbug to see request and responses
+#logging.basicConfig(level=logging.DEBUG)
+
+import telepot
+
+###TelegramBot.sendMessage(742327103, 'Hey pypy!')
+
+TelegramBot = telepot.Bot('5699393463:AAFeR4OzXkiZQfEPPlBNdPC-RBmTvAhrH8g')
+
+TelegramBot.getMe()
+{'first_name': 'Market Machine', 'username': 'MarketMachineBot', 'id': 742327103}
+
+
+
+
+startTime = datetime.now()
+
+#start of our program
+
+api = ShoonyaApiPy()
+
+api2 = ShoonyaApiPy()
+
+#make the api call
+
+ret = api.login(userid= l.user, password=l.pwd, twoFA=l.token, vendor_code=l.vc, api_secret=l.app_key, imei=l.imei)
+
+usersession=ret.get("susertoken")
+
+ret1 = api2.set_session(userid= l.user, password=l.pwd, usertoken= usersession)
+
+trading_day = datetime.now()
+
+#Get Positions
+pos = api.get_positions()
+print(pos)
+
+#Get Holdings
+hold = api.get_holdings()
+print(hold)
+
+end = dt.datetime.today()
+
+end = end.replace(hour=0, minute=0, second=0, microsecond=0)
+
+start = end - dt.timedelta(days = 10)
+
+#Working dfNiftySeries
+
+##GET LTP
+
+def get_ltp(Idxtoken):
+    _ltp = None
+    try:
+        response_json = api.get_quotes(exchange='NSE', token=Idxtoken)
+        print("response_json['stat']", response_json['stat'])
+        if response_json['stat']=='Ok':
+            print("float(response_json['lp']", float(response_json['lp']))
+            #print("len(response_json success)")
+            #print("len(response_json'Ok')", len(response_json['Ok']))  
+            print("response_json success= ok")
+            return float(response_json['lp'])
+    except Exception as e:
+        print(e)
+    return _ltp
+
+
+def myround(x,base):
+    return base * round(x/base)
+
+#nifty_ltp = get_ltp(Idxtoken='26000')
+
+Nifty_Ltp = get_ltp(Idxtoken='26000')
+
+BankNifty_Ltp = get_ltp(Idxtoken="26009")
+
+FinNifty_Ltp = get_ltp(Idxtoken="26037")
+
+#nifty_strike=myround(nifty_ltp, base=50)
+
+Nifty_ATM_Strike=myround(Nifty_Ltp, base=50)
+
+BankNifty_ATM_Strike=myround(BankNifty_Ltp, base=100)
+
+FinNifty_ATM_Strike=myround(FinNifty_Ltp, base=100)
+
+###################################
+
+##TO FETCH CURRENT NIFTY AND BANK NIFTY EXPIRY
+
+NearExpiryNifty = dt.date.today()
+
+print("NearExpiryNifty = dt.date.today()",NearExpiryNifty)
+
+for i in range(7):
+    if NearExpiryNifty.strftime("%A")=="Thursday":
+        print("NearExpiryNifty Today thursday",NearExpiryNifty)
+        break
+    NearExpiryNifty+=dt.timedelta(days=1)
+    if NearExpiryNifty.strftime("%A")=="Thursday":
+        NearExpiryNifty = NearExpiryNifty
+        #NearExpiryNifty = NearExpiryNifty.strftime("%d%b%y")
+        print("NearExpiryNifty2",NearExpiryNifty)
+        break
+
+NearExpiryNifty = NearExpiryNifty.strftime("%d-%b-%Y").upper()
+
+##TO FETCH CURRENT NIFTY AND BANK NIFTY EXPIRY
+
+##TO FETCH CURRENT FIN NIFTY EXPIRY DATE
+
+NearExpiryFinNifty = dt.date.today()
+
+print("NearExpiryFinNifty = dt.date.today()",NearExpiryFinNifty)
+
+for i in range(7):
+    if NearExpiryFinNifty.strftime("%A")=="Tuesday":
+        print("NearExpiryNifty Today thursday",NearExpiryFinNifty)
+        break
+    NearExpiryFinNifty+=dt.timedelta(days=1)
+    if NearExpiryFinNifty.strftime("%A")=="Tuesday":
+        NearExpiryFinNifty = NearExpiryFinNifty
+        #NearExpiryNifty = NearExpiryNifty.strftime("%d%b%y")
+        print("NearExpiryNifty2",NearExpiryFinNifty)
+        break
+
+NearExpiryFinNifty = NearExpiryFinNifty.strftime("%d-%b-%Y").upper()
+
+print("NearExpiryFinNifty NearExpiryFinNifty NearExpiryFinNifty",NearExpiryFinNifty)
+
+def Time_interval(Interval):
+
+    #Time_interval_1 =15 
+
+    now = dt.datetime.now()
+
+    today915am = now.replace(hour=9, minute=15, second=0, microsecond=0)
+
+    today1015am = now.replace(hour=9, minute=15, second=0, microsecond=0)
+
+    today1215pm = now.replace(hour=12, minute=15, second=0, microsecond=0)
+
+    today1315pm = now.replace(hour=13, minute=15, second=0, microsecond=0)
+
+    today1415pm = now.replace(hour=14, minute=15, second=0, microsecond=0)
+
+    today1525pm = now.replace(hour=13, minute=15, second=0, microsecond=0)
+
+    if (Interval =="FINNIFTY" or "NIFTY"):
+
+        if ((datetime.now() > today915am) & (datetime.now() < today1015am)):
+
+             Time_interval_1 =30 
+
+        elif ((datetime.now() > today1015am) & (datetime.now() < today1215pm)):
+                    
+            Time_interval_1 =15
+
+        elif ((datetime.now() > today1215pm ) & (datetime.now() < today1315pm)):
+
+            Time_interval_1 = 10
+
+        elif ((datetime.now() > today1315pm ) & (datetime.now() < today1415pm)):
+
+            Time_interval_1 = 5
+
+        elif ((datetime.now() > today1415pm )):
+
+            Time_interval_1 = 3
+
+            TelegramBot.sendMessage(742327103, "Time_interval_1")
+            TelegramBot.sendMessage(742327103, Time_interval_1)
+
+            print("Time_interval_1", Time_interval_1)
+            
+
+                                
+         
+
+##TO FETCH CURRENT FIN NIFTY EXPIRY DATE
+
+## TO EXTRACT SYMBOLS FILES AND SAVE DAILY AS TXT FILES
+
+import requests
+import zipfile
+import os
+
+root = 'https://shoonya.finvasia.com/'
+
+#masters = ['NSE_symbols.txt.zip', 'NFO_symbols.txt.zip', 'CDS_symbols.txt.zip', 'MCX_symbols.txt.zip', 'BSE_symbols.txt.zip'] 
+
+masters = ['NSE_symbols.txt.zip', 'NFO_symbols.txt.zip'] 
+
+File_NFO_symbols= 'NFO_symbols.txt'
+
+File_NSE_symbols= 'NSE_symbols.txt'
+
+File_BSE_symbols= 'BSE_symbols.txt'
+
+File_CDS_symbols= 'CDS_symbols.txt'
+
+File_MCX_symbols= 'MCX_symbols.txt'
+
+t=os.path.getmtime(File_NFO_symbols)
+
+modifiedDate = datetime.fromtimestamp(t).strftime('%Y-%m-%d')
+
+print("modifiedDate = dt.fromtimestamp(t).strftime('%Y-%m-%d-%H:%M')",modifiedDate)
+
+downloadfile ='Y'
+
+if(modifiedDate==str(date.today())):
+    print("Token file already updated today!!!-not download")
+    downloadfile =='N'   
+elif(downloadfile =='Y'):
+    print("Token file downloadinggggggg")
+
+    for zip_file in masters:    
+        print(f'downloading {zip_file}')
+        url = root + zip_file
+        r = requests.get(url, allow_redirects=True)
+        open(zip_file, 'wb').write(r.content)
+        file_to_extract = zip_file.split()
+ 
+    try:
+        with zipfile.ZipFile(zip_file) as z:
+            z.extractall()
+            print("Extracted: ", zip_file)
+    except:
+        print("Invalid file")
+        os.remove(zip_file)
+        print(f'remove: {zip_file}')
+
+FileFNO_dF=pd.read_csv(File_NFO_symbols, sep=',')
+
+FileCash_dF=pd.read_csv(File_NSE_symbols, sep=',')
+
+## TO EXTRACT SYMBOLS FILES AND SAVE DAILY AS TXT FILES AND TO DATAFRAMES
+
+####added on 14 nov 22
+
+#printing data frame working as on 24-11-2022
+
+lastBusDay = dt.datetime.today()
+
+lastBusDay = lastBusDay.replace(hour=0, minute=0, second=0, microsecond=0)
+
+#ONLY WORKS ON TRAING DAYS
+
+#FinNiftyATM_CE_PriceSeriesDF= FinNiftyATM_CE_PriceSeriesDF1[["time","into", "inth", "intl", "intc", "intvwap", "intv", "intoi", "v"]]
+
+#print('FinNiftyATM_CE_PriceSeriesDF------------- FinNiftyATM_CE_PriceSeriesDF===============',FinNiftyATM_CE_PriceSeriesDF)
+
+PositionsDF=pd.DataFrame(pos)
+
+endTime = datetime.now()
+
+td = (endTime-startTime).total_seconds() * 10**3
+
+print(f"The time for execution of the above program is: {td:.03f}ms")
+
+#master_df = Nifty_LTP_PE_ATM_Time_PriceSeriesDF
+
+def PlaceOrder_Logic(trading_Symbol, Trade_price, Qty):
+
+    print("PlaceOrder_Logic --- PlaceOrder_Logic---- PlaceOrder_Logic Function")
+
+    print("-- PlaceOrder_Logic Function ---lotSize, trading_Symbol, Trade_price", Qty, trading_Symbol, Trade_price)
+
+    PlaceOrder2= api.place_order(buy_or_sell='B', product_type='M',
+                        exchange='NFO', tradingsymbol=trading_Symbol, 
+                        quantity=Qty*2, discloseqty=0,price_type='SL-LMT', price=Trade_price+0.5, trigger_price=Trade_price+0.25,
+                        retention='DAY', remarks='my_order_001')
+
+    print("PlaceOrder --- PlaceOrder---- PlaceOrder2", PlaceOrder2)
+
+    #TrailOrder_Logic(PlaceOrder2)
+
+
+
+   
+
+def TrailOrder_Logic():
+    #print("PlaceOrder_Logic --- PlaceOrder_Logic---- PlaceOrder_Logic Function")
+
+    #print("-- PlaceOrder_Logic Function ---lotSize, trading_Symbol, Trade_price", Qty, trading_Symbol, Trade_price)
+    
+    Trade_book = api.get_trade_book()
+
+    Order_book =api.get_order_book()
+
+    print("Trade_book",Trade_book)
+
+    print("len(Order_book",len(Order_book))
+    
+    open_positions = api.get_positions()
+
+    print("open_positions",open_positions)
+
+    #Openorders_history = api.single_order_history(orderno=orderno)
+
+    #orderno = ret['norenordno'] #from placeorder return value
+
+    #trail_modify_order = api.modify_order(exchange='NSE', tradingsymbol='CANBK-EQ', orderno=orderno,
+    #                               newquantity=2, newprice_type='MKT', newprice=0.00)
+
+
+
+def Check_Logic(CEPE_ATM_100_PSDF,CEPE_ATM_100_TradeSymbol_DF,lotSize):
+
+    print("FN_CEPE_ATM_100_PSDF,FN_CEPE_ATM_100_TradeSymbol_DF,lotSize",CEPE_ATM_100_PSDF,CEPE_ATM_100_TradeSymbol_DF,lotSize ) 
+    
+    i = 1
+    j = 0
+    k = 0
+           
+    for i in range(4):
+             
+        k=k+1
+
+        #need to remove this line
+
+        print("trading_Symbol= CEPE_ATM_100_TradeSymbol_DF[i]",CEPE_ATM_100_TradeSymbol_DF[i])
+
+        TelegramBot.sendMessage(742327103, "trading_Symbol= CEPE_ATM_100_TradeSymbol_DF[i]")
+        
+        TelegramBot.sendMessage(742327103, CEPE_ATM_100_TradeSymbol_DF[i])
+                                                                                
+        print("Trade_price= float(CEPE_ATM_100_PSDF.loc[i].loc[0].intl)",float(CEPE_ATM_100_PSDF.loc[i].loc[0].intl))
+        
+        print("lot size",lotSize)
+
+        PlaceOrder_Logic(trading_Symbol= CEPE_ATM_100_TradeSymbol_DF[i], Trade_price= float(CEPE_ATM_100_PSDF.loc[i].loc[0].intl), Qty= lotSize)
+                                           
+        #PlaceOrder_Logic(trading_Symbol= N_CEPE_ATM_100_TradeSymbol_DF[i], Trade_price= float(N_CEPE_ATM_100_PSDF.loc[i].loc[0].intl), Qty= lotSize)
+        
+        
+        if(((CEPE_ATM_100_PSDF.loc[i].loc[j].intc)) > (CEPE_ATM_100_PSDF.loc[i].loc[j+1].intc)) & ((CEPE_ATM_100_PSDF.loc[i].loc[j+1].intc) > (CEPE_ATM_100_PSDF.loc[i].loc[j+1].inth)):
+            #print("in in if loop 1 ----------looop 1--FN_CEPE_ATM_100_PSDF.loc[i].loc[j].intc",FN_CEPE_ATM_100_PSDF.loc[i].loc[j].intc)
+            print("trading_Symbol= FN_CEPE_ATM_100_Tok_DF[i]", trading_Symbol= CEPE_ATM_100_TradeSymbol_DF[i])
+            if((CEPE_ATM_100_PSDF.loc[i].loc[j+1].intc) > (CEPE_ATM_100_PSDF.loc[i].loc[j+2].intc)):
+                print("in in if loop 2 ----------looop 2")
+                if((CEPE_ATM_100_PSDF.loc[i].loc[j+2].intc) > (CEPE_ATM_100_PSDF.loc[i].loc[j+3].intc)):
+
+                    if(((CEPE_ATM_100_PSDF.loc[i].loc[j+3].intc) > (CEPE_ATM_100_PSDF.loc[i].loc[j+4].intc))):
+
+                        if((CEPE_ATM_100_PSDF.loc[i].loc[j+4].intc) > (CEPE_ATM_100_PSDF.loc[i].loc[j+5].intc)):
+                                                                   
+                                                      
+                            PlaceOrder_Logic(lotSize, trading_Symbol= CEPE_ATM_100_TradeSymbol_DF[i], Trade_price= float(CEPE_ATM_100_PSDF.loc[i].loc[0].intc))
+                            print("placing order on FN_CEPE_ATM_100_TradeSymbol_DF ", CEPE_ATM_100_TradeSymbol_DF[i])
+                            print("placing order on at ", time.now())
+
+                            TelegramBot.sendMessage(742327103, 'CEPE_ATM_100_TradeSymbol_DF[i]::: CONDITIONS SATIFIED :::::::placing order on TradeSymbol ')
+
+                            TelegramBot.sendMessage(742327103, CEPE_ATM_100_TradeSymbol_DF[i])
+
+                            TelegramBot.sendMessage(742327103, time.now())
+                                                                                    
+                            i= i+1 
+                 
+                else: 
+                    i=i+1                      
+            else: 
+                i=i+1
+        
+        else:  
+
+            i=i+1
+            print("i=i+1", i)
+
+def finNifty_Details():
+
+    lotSize = 40
+
+    FinNifty_ATM_Strike
+
+    FinNifty_Ltp
+
+    Interval= 'FINNIFTY'
+
+    #Time_interval
+
+    print("FinNifty_ATM_Strike", FinNifty_ATM_Strike)
+
+    getFinNifty_PE_Details_CurrentExpiry_ATM = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'FINNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryFinNifty) & (FileFNO_dF['StrikePrice'] == FinNifty_ATM_Strike) & (FileFNO_dF['OptionType'] == 'PE')]
+
+    getFinNifty_PE_Details_CurrentExpiry_Far100 = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'FINNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryFinNifty) & (FileFNO_dF['StrikePrice'] == FinNifty_ATM_Strike-100) & (FileFNO_dF['OptionType'] == 'PE')]
+    
+    getFinNifty_CE_Details_CurrentExpiry_ATM = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'FINNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryFinNifty) & (FileFNO_dF['StrikePrice'] == FinNifty_ATM_Strike) & (FileFNO_dF['OptionType'] == 'CE')]
+
+    getFinNifty_CE_Details_CurrentExpiry_Far100 = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'FINNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryFinNifty) & (FileFNO_dF['StrikePrice'] == FinNifty_ATM_Strike+100) & (FileFNO_dF['OptionType'] == 'CE')]
+
+    getFinNifty_PE_TradingSymbol_CurrentExpiry_ATM = getFinNifty_PE_Details_CurrentExpiry_ATM['TradingSymbol'].to_string(index=False)
+
+    getFinNifty_PE_TradingSymbol_CurrentExpiry_Far100 = getFinNifty_PE_Details_CurrentExpiry_Far100['TradingSymbol'].to_string(index=False)
+
+    getFinNifty_CE_TradingSymbol_CurrentExpiry_ATM = getFinNifty_CE_Details_CurrentExpiry_ATM['TradingSymbol'].to_string(index=False)
+
+    getFinNifty_CE_TradingSymbol_CurrentExpiry_Far100 = getFinNifty_CE_Details_CurrentExpiry_Far100['TradingSymbol'].to_string(index=False)
+
+    getFinNifty_PE_Token_CurrentExpiry_ATM= getFinNifty_PE_Details_CurrentExpiry_ATM['Token'].to_string(index=False)
+
+    getFinNifty_PE_Token_CurrentExpiry_Far100= getFinNifty_PE_Details_CurrentExpiry_Far100['Token'].to_string(index=False)
+
+    getFinNifty_CE_Token_CurrentExpiry_ATM= getFinNifty_CE_Details_CurrentExpiry_ATM['Token'].to_string(index=False)
+
+    getFinNifty_CE_Token_CurrentExpiry_Far100= getFinNifty_CE_Details_CurrentExpiry_Far100['Token'].to_string(index=False)
+
+    FinNiftyATM_PE_PriceSeries_ATM = api.get_time_price_series(exchange='NFO', token=getFinNifty_PE_Token_CurrentExpiry_ATM, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+
+    FinNiftyATM_PE_PriceSeries_Far100 = api.get_time_price_series(exchange='NFO', token=getFinNifty_PE_Token_CurrentExpiry_Far100, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+    
+    FinNiftyATM_CE_PriceSeries_ATM = api.get_time_price_series(exchange='NFO', token=getFinNifty_CE_Token_CurrentExpiry_ATM, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+
+    FinNiftyATM_CE_PriceSeries_Far100 = api.get_time_price_series(exchange='NFO', token=getFinNifty_CE_Token_CurrentExpiry_Far100, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+    
+    #print("FinNiftyATM_PE_PriceSeries_ATM==== FinNiftyATM_PE_PriceSeries_ATM",FinNiftyATM_PE_PriceSeries_ATM)
+    
+    print("Time_interval",Time_interval(Interval))
+
+    FinNiftyATM_PE_ATM_PriceSeriesDF=pd.DataFrame(FinNiftyATM_PE_PriceSeries_ATM)
+
+    FinNiftyATM_CE_ATM_PriceSeriesDF=pd.DataFrame(FinNiftyATM_CE_PriceSeries_ATM)
+
+    FinNiftyATM_PE_Far100_PriceSeriesDF=pd.DataFrame(FinNiftyATM_PE_PriceSeries_Far100)
+
+    FinNiftyATM_CE_Far100_PriceSeriesDF=pd.DataFrame(FinNiftyATM_CE_PriceSeries_Far100)
+   
+    #print("FinNiftyATM_PE_ATM_PriceSeriesDF[0].inth ,FinNiftyATM_PE_ATM_PriceSeriesDF[0].inth", FinNiftyATM_PE_ATM_PriceSeriesDF.loc[0].inth, FinNiftyATM_PE_ATM_PriceSeriesDF.loc[1].inth)
+    
+    #MERGE DATAFRAME OF ATM CE PE AND 100 OTM CE PE
+    FN_CEPE_ATM_100_Tok_DF = [getFinNifty_CE_Token_CurrentExpiry_ATM, getFinNifty_PE_Token_CurrentExpiry_ATM,getFinNifty_CE_Token_CurrentExpiry_Far100,getFinNifty_PE_Token_CurrentExpiry_Far100]
+ 
+    FN_CEPE_ATM_100_TradeSymbol_DF = [getFinNifty_CE_TradingSymbol_CurrentExpiry_ATM, getFinNifty_PE_TradingSymbol_CurrentExpiry_ATM,getFinNifty_CE_TradingSymbol_CurrentExpiry_Far100,getFinNifty_PE_TradingSymbol_CurrentExpiry_Far100]
+ 
+    FinNifty_PriceSeries_Frames = [FinNiftyATM_CE_ATM_PriceSeriesDF, FinNiftyATM_PE_ATM_PriceSeriesDF,FinNiftyATM_CE_Far100_PriceSeriesDF,FinNiftyATM_PE_Far100_PriceSeriesDF]
+ 
+    FN_CEPE_ATM_100_PSDF = pd.concat(FinNifty_PriceSeries_Frames, keys=[0,1,2,3])
+    
+    Check_Logic(FN_CEPE_ATM_100_PSDF,FN_CEPE_ATM_100_TradeSymbol_DF, lotSize)
+       
+
+
+def Nifty_Details():
+
+    lotSize = 50
+
+    #Time_interval()
+
+    #Nifty_ATM_Strike
+
+    #Nifty_Ltp
+
+    Interval="NIFTY"
+
+    print("Nifty_ATM_Strike", Nifty_ATM_Strike)
+
+    getNifty_PE_Details_CurrentExpiry_ATM = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'NIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == Nifty_ATM_Strike) & (FileFNO_dF['OptionType'] == 'PE')]
+
+    getNifty_PE_Details_CurrentExpiry_Far100 = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'NIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == Nifty_ATM_Strike-100) & (FileFNO_dF['OptionType'] == 'PE')]
+    
+    getNifty_CE_Details_CurrentExpiry_ATM = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'NIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == Nifty_ATM_Strike) & (FileFNO_dF['OptionType'] == 'CE')]
+
+    getNifty_CE_Details_CurrentExpiry_Far100 = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'NIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == Nifty_ATM_Strike+100) & (FileFNO_dF['OptionType'] == 'CE')]
+
+    getNifty_PE_TradingSymbol_CurrentExpiry_ATM = getNifty_PE_Details_CurrentExpiry_ATM['TradingSymbol'].to_string(index=False)
+
+    getNifty_PE_TradingSymbol_CurrentExpiry_Far100 = getNifty_PE_Details_CurrentExpiry_Far100['TradingSymbol'].to_string(index=False)
+
+    getNifty_CE_TradingSymbol_CurrentExpiry_ATM = getNifty_CE_Details_CurrentExpiry_ATM['TradingSymbol'].to_string(index=False)
+
+    getNifty_CE_TradingSymbol_CurrentExpiry_Far100 = getNifty_CE_Details_CurrentExpiry_Far100['TradingSymbol'].to_string(index=False)
+
+    getNifty_PE_Token_CurrentExpiry_ATM= getNifty_PE_Details_CurrentExpiry_ATM['Token'].to_string(index=False)
+
+    getNifty_PE_Token_CurrentExpiry_Far100= getNifty_PE_Details_CurrentExpiry_Far100['Token'].to_string(index=False)
+
+    getNifty_CE_Token_CurrentExpiry_ATM= getNifty_CE_Details_CurrentExpiry_ATM['Token'].to_string(index=False)
+
+    getNifty_CE_Token_CurrentExpiry_Far100= getNifty_CE_Details_CurrentExpiry_Far100['Token'].to_string(index=False)
+
+    NiftyATM_PE_PriceSeries_ATM = api.get_time_price_series(exchange='NFO', token=getNifty_PE_Token_CurrentExpiry_ATM, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+
+    NiftyATM_PE_PriceSeries_Far100 = api.get_time_price_series(exchange='NFO', token=getNifty_PE_Token_CurrentExpiry_Far100, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+    
+    NiftyATM_CE_PriceSeries_ATM = api.get_time_price_series(exchange='NFO', token=getNifty_CE_Token_CurrentExpiry_ATM, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+
+    NiftyATM_CE_PriceSeries_Far100 = api.get_time_price_series(exchange='NFO', token=getNifty_CE_Token_CurrentExpiry_Far100, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+    
+    NiftyATM_PE_ATM_PriceSeriesDF=pd.DataFrame(NiftyATM_PE_PriceSeries_ATM)
+
+    NiftyATM_CE_ATM_PriceSeriesDF=pd.DataFrame(NiftyATM_CE_PriceSeries_ATM)
+
+    NiftyATM_PE_Far100_PriceSeriesDF=pd.DataFrame(NiftyATM_PE_PriceSeries_Far100)
+
+    NiftyATM_CE_Far100_PriceSeriesDF=pd.DataFrame(NiftyATM_CE_PriceSeries_Far100)
+   
+    #print("NiftyATM_PE_ATM_PriceSeriesDF[0].inth ,NiftyATM_PE_ATM_PriceSeriesDF[0].inth", NiftyATM_PE_ATM_PriceSeriesDF.loc[0].inth, NiftyATM_PE_ATM_PriceSeriesDF.loc[1].inth)
+    
+    #MERGE DATAFRAME OF ATM CE PE AND 100 OTM CE PE
+    N_CEPE_ATM_100_Tok_DF = [getNifty_CE_Token_CurrentExpiry_ATM, getNifty_PE_Token_CurrentExpiry_ATM,getNifty_CE_Token_CurrentExpiry_Far100,getNifty_PE_Token_CurrentExpiry_Far100]
+ 
+    N_CEPE_ATM_100_TradeSymbol_DF = [getNifty_CE_TradingSymbol_CurrentExpiry_ATM, getNifty_PE_TradingSymbol_CurrentExpiry_ATM,getNifty_CE_TradingSymbol_CurrentExpiry_Far100,getNifty_PE_TradingSymbol_CurrentExpiry_Far100]
+ 
+    Nifty_PriceSeries_Frames = [NiftyATM_CE_ATM_PriceSeriesDF, NiftyATM_PE_ATM_PriceSeriesDF,NiftyATM_CE_Far100_PriceSeriesDF,NiftyATM_PE_Far100_PriceSeriesDF]
+ 
+    N_CEPE_ATM_100_PSDF = pd.concat(Nifty_PriceSeries_Frames, keys=[0,1,2,3])
+    
+    print("N_CEPE_ATM_100_TradeSymbol_DF",N_CEPE_ATM_100_TradeSymbol_DF)
+
+    Check_Logic(N_CEPE_ATM_100_PSDF,N_CEPE_ATM_100_TradeSymbol_DF, lotSize)
+       
+
+def BankNifty_Details():
+
+    lotSize = 25
+
+    #Time_interval()
+
+    #Nifty_ATM_Strike
+
+    #Nifty_Ltp
+
+    Interval="NIFTY"
+
+    print("Nifty_ATM_Strike", Nifty_ATM_Strike)
+
+    getBankNifty_PE_Details_CurrentExpiry_ATM = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'BANKNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == BankNifty_ATM_Strike) & (FileFNO_dF['OptionType'] == 'PE')]
+
+    getBankNifty_PE_Details_CurrentExpiry_Far100 = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'BANKNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == BankNifty_ATM_Strike-100) & (FileFNO_dF['OptionType'] == 'PE')]
+    
+    getBankNifty_CE_Details_CurrentExpiry_ATM = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'BANKNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == BankNifty_ATM_Strike) & (FileFNO_dF['OptionType'] == 'CE')]
+
+    getBankNifty_CE_Details_CurrentExpiry_Far100 = FileFNO_dF.loc[(FileFNO_dF['Symbol'] == 'BANKNIFTY')& (FileFNO_dF['Expiry'] == NearExpiryNifty) & (FileFNO_dF['StrikePrice'] == BankNifty_ATM_Strike+100) & (FileFNO_dF['OptionType'] == 'CE')]
+
+    getBankNifty_PE_TradingSymbol_CurrentExpiry_ATM = getBankNifty_PE_Details_CurrentExpiry_ATM['TradingSymbol'].to_string(index=False)
+
+    getBankNifty_PE_TradingSymbol_CurrentExpiry_Far100 = getBankNifty_PE_Details_CurrentExpiry_Far100['TradingSymbol'].to_string(index=False)
+
+    getBankNifty_CE_TradingSymbol_CurrentExpiry_ATM = getBankNifty_CE_Details_CurrentExpiry_ATM['TradingSymbol'].to_string(index=False)
+
+    getBankNifty_CE_TradingSymbol_CurrentExpiry_Far100 = getBankNifty_CE_Details_CurrentExpiry_Far100['TradingSymbol'].to_string(index=False)
+
+    getBankNifty_PE_Token_CurrentExpiry_ATM= getBankNifty_PE_Details_CurrentExpiry_ATM['Token'].to_string(index=False)
+
+    getBankNifty_PE_Token_CurrentExpiry_Far100= getBankNifty_PE_Details_CurrentExpiry_Far100['Token'].to_string(index=False)
+
+    getBankNifty_CE_Token_CurrentExpiry_ATM= getBankNifty_CE_Details_CurrentExpiry_ATM['Token'].to_string(index=False)
+
+    getBankNifty_CE_Token_CurrentExpiry_Far100= getBankNifty_CE_Details_CurrentExpiry_Far100['Token'].to_string(index=False)
+
+    BankNiftyATM_PE_PriceSeries_ATM = api.get_time_price_series(exchange='NFO', token=getBankNifty_PE_Token_CurrentExpiry_ATM, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+
+    BankNiftyATM_PE_PriceSeries_Far100 = api.get_time_price_series(exchange='NFO', token=getBankNifty_PE_Token_CurrentExpiry_Far100, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+    
+    BankNiftyATM_CE_PriceSeries_ATM = api.get_time_price_series(exchange='NFO', token=getBankNifty_CE_Token_CurrentExpiry_ATM, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+
+    BankNiftyATM_CE_PriceSeries_Far100 = api.get_time_price_series(exchange='NFO', token=getBankNifty_CE_Token_CurrentExpiry_Far100, starttime=lastBusDay.timestamp(), interval=Time_interval(Interval))
+    
+    BankNiftyATM_PE_ATM_PriceSeriesDF=pd.DataFrame(BankNiftyATM_PE_PriceSeries_ATM)
+
+    BankNiftyATM_CE_ATM_PriceSeriesDF=pd.DataFrame(BankNiftyATM_CE_PriceSeries_ATM)
+
+    BankNiftyATM_PE_Far100_PriceSeriesDF=pd.DataFrame(BankNiftyATM_PE_PriceSeries_Far100)
+
+    BankNiftyATM_CE_Far100_PriceSeriesDF=pd.DataFrame(BankNiftyATM_CE_PriceSeries_Far100)
+   
+    #print("NiftyATM_PE_ATM_PriceSeriesDF[0].inth ,NiftyATM_PE_ATM_PriceSeriesDF[0].inth", NiftyATM_PE_ATM_PriceSeriesDF.loc[0].inth, NiftyATM_PE_ATM_PriceSeriesDF.loc[1].inth)
+    
+    #MERGE DATAFRAME OF ATM CE PE AND 100 OTM CE PE
+    BN_CEPE_ATM_100_Tok_DF = [getBankNifty_CE_Token_CurrentExpiry_ATM, getBankNifty_PE_Token_CurrentExpiry_ATM,getBankNifty_CE_Token_CurrentExpiry_Far100,getBankNifty_PE_Token_CurrentExpiry_Far100]
+ 
+    BN_CEPE_ATM_100_TradeSymbol_DF = [getBankNifty_CE_TradingSymbol_CurrentExpiry_ATM, getBankNifty_PE_TradingSymbol_CurrentExpiry_ATM,getBankNifty_CE_TradingSymbol_CurrentExpiry_Far100,getBankNifty_PE_TradingSymbol_CurrentExpiry_Far100]
+ 
+    BankNifty_PriceSeries_Frames = [BankNiftyATM_CE_ATM_PriceSeriesDF, BankNiftyATM_PE_ATM_PriceSeriesDF,BankNiftyATM_CE_Far100_PriceSeriesDF,BankNiftyATM_PE_Far100_PriceSeriesDF]
+ 
+    BN_CEPE_ATM_100_PSDF = pd.concat(BankNifty_PriceSeries_Frames, keys=[0,1,2,3])
+    
+    print("N_CEPE_ATM_100_TradeSymbol_DF",BN_CEPE_ATM_100_TradeSymbol_DF)
+
+    Check_Logic(BN_CEPE_ATM_100_PSDF,BN_CEPE_ATM_100_TradeSymbol_DF, lotSize)
+       
+
+
+
+def update_postion( ):
+
+    #print("hello",datetime.now())
+
+    print("place your logic here to repeat",datetime.now())
+    
+    finNifty_Details()
+
+    Nifty_Details()
+
+    BankNifty_Details()
+
+    TrailOrder_Logic()
+    #Trade_Logic()
+
+endTimes = datetime(trading_day.year, trading_day.month, trading_day.day, 19, 50)
+
+print("endTimes",endTimes)
+
+schedule.every( 0.001).minutes.at(":00").do(update_postion)
+
+while(True):
+    schedule.run_pending()
+    if datetime.now() >= endTimes:
+        print("stoping algo")
+        break
+    sleep(1)
